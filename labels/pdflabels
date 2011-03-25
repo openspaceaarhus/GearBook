@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use PDF::API2;
+use GD::Barcode::QRcode;
+use FindBin qw($Bin $Script);
+
+sub mm2ps {
+    my $mm = shift;
+    return $mm*72/25.4;
+}
+
+my $rows = 4;
+my $cols = 3;
+my $xoff = 10;
+my $yoff = 10;
+my $xsize = (210-(2+$cols-1)*$xoff)/$cols;
+my $ysize = (295-(2+$rows-1)*$yoff)/$rows;
+
+my $xpitch = (210-2*$xoff)/$cols;
+my $ypitch = (295-2*$yoff)/$rows;
+
+my $pdf = PDF::API2->new();
+my $bender = $pdf->ttfont("$Bin/bender/Bender Black.otf");
+#my $bg = $pdf->image_png("$Bin/t3-mini-logo.png");
+
+my $page = $pdf->page();
+$page->mediabox('A4');
+
+my $text = $page->text();
+my $gfx = $page->gfx;
+
+for my $row (0..$rows-1) {
+    my $y = $yoff + $row*$ypitch;
+
+    for my $col (0..$cols-1) {
+	my $x = $xoff + $col * $xpitch;
+	
+	my $id = 10000000 + $col*$rows + $row;
+	my $url = "HTTP://GB.OSAA.DK/$id";
+	my $qr = $pdf->image_gd(GD::Barcode::QRcode->new(
+				    $url,
+					{ Ecc => 'Q',
+					  Version=>2,
+					  ModuleSize => 1}		 
+				)->plot, -lossless => 1);
+#	$gfx->image($bg, mm2ps($x), mm2ps($y), mm2ps($xsize), mm2ps($ysize));
+	$gfx->image($qr, mm2ps($x), mm2ps($y+2), 
+		    mm2ps($xsize), mm2ps($ysize-2));
+
+	$gfx->textlabel(mm2ps($x+$xsize/2), mm2ps($y),
+			$bender, mm2ps(3), $url,
+			-align => 'center',
+	    );
+    }
+}
+
+#$text->font($bender, 20);
+#$text->translate(200, 700);
+#$text->text('Hello World!');
+
+#my $gfx = $page->gfx;
+#$gfx->image( $image, 100, 100 );
+
+
+$pdf->saveas('labels.pdf');
+#system("okular labels.pdf");
+
+exit 0;
