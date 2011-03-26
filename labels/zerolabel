@@ -10,8 +10,8 @@ sub mm2ps {
     return $mm*72/25.4;
 }
 
-my $rows = 7;
-my $cols = 3;
+my $rows = 3;
+my $cols = 1;
 my $xoff = 8;
 my $yoff = 14.5;
 my $xsize = 63.5;
@@ -21,11 +21,9 @@ my $ypitch = 38.1;
 
 my $pdf = PDF::API2->new();
 my $hb = $pdf->corefont('Helvetica-Bold');
-#my $bender = $pdf->ttfont("$Bin/bender/Bender Black.otf");
-my $bg = $pdf->image_png("$Bin/dnh.png");
 
-my $id = 1000;
-for my $pn (1..10) {
+my $id = 0;
+for my $pn (1..1) {
     my $page = $pdf->page();
     $page->mediabox('A4');
     
@@ -34,7 +32,22 @@ for my $pn (1..10) {
     
     for my $row (0..$rows-1) {
 	my $y = $yoff + $row*$ypitch;
-	
+
+	my $bg;
+	my $id;
+	if ($row == 0) {
+	    $bg = $pdf->image_png("$Bin/dnh.png");
+	    $id = 1000;
+	} elsif ($row == 1) {
+	    $bg = $pdf->image_png("$Bin/borrowed.png");
+	    $id = 2000;
+	} elsif ($row == 2) {
+	    $bg = $pdf->image_png("$Bin/hack.png");
+	    $id = 3000;
+	} else {
+	    die;
+	}
+
 	for my $col (0..$cols-1) {
 	    my $x = $xoff + $col * $xpitch;
 	    
@@ -42,7 +55,6 @@ for my $pn (1..10) {
 	    $gfx->image( $bg, mm2ps($x), mm2ps($y), 
 			 mm2ps($xsize), mm2ps($ysize) );
 	    
-	    $id++;
 	    my $url = "HTTP://GB.OSAA.DK/$id";
 	    my $qr = $pdf->image_gd(GD::Barcode::QRcode->new(
 				    $url,
@@ -61,7 +73,7 @@ for my $pn (1..10) {
     }
 }
 
-$pdf->saveas('labels-dnh-1000.pdf');
-system("okular labels-dnh-1000.pdf");
+$pdf->saveas('labels-zero.pdf');
+system("okular labels-zero.pdf");
 
 exit 0;
