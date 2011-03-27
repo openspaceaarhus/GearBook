@@ -1,4 +1,4 @@
-package gb.osaa.dk;
+package dk.osaa.gb;
 
 import java.io.IOException;
 

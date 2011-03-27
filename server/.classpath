@@ -23,5 +23,7 @@
 	<classpathentry kind="lib" path="lib/jetty-distribution-8.0.0.M0/lib/jetty-websocket-8.0.0.M0.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-distribution-8.0.0.M0/lib/jetty-xml-8.0.0.M0.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-distribution-8.0.0.M0/lib/servlet-api-3.0.jar"/>
+	<classpathentry kind="lib" path="lib/zxing-1.6/core/core.jar" sourcepath="lib/zxing-1.6/core/src"/>
+	<classpathentry kind="lib" path="lib/zxing-1.6/javase/javase.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
