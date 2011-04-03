@@ -138,23 +138,23 @@ public class QRDecoder {
 	 * @param args Ignored
 	 */
 	public static void main(String[] args) {
-		
-		File td = new File("/home/ff/projects/osaa/GearBook/testdata");
-		for (File f : td.listFiles()) {
+
+		for (String in : args) {
+			System.out.print(in);
 			
-			log.info("Reading: "+f);
 			try {
+				File f = new File(in);
 				Collection<Result> results =  QRDecoder.decodeImage(new FileInputStream(f));
 				for (Result r : results) {
-					log.info("Found: "+r);
+					System.out.print("\t");
+					System.out.print(r);
 				}
 				
 			} catch (FileNotFoundException e) {
-				log.log(Level.SEVERE, "Urgh: "+f, e);
-				continue;
 			}
-			
+			System.out.print("\n");
 		}
+		
 		System.exit(0);
 	}
 }
