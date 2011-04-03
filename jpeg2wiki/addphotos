@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use FindBin qw($Bin $Script);
+use XML::Simple;
+use Storable;
+
+my %TYPE2CAT = (
+	1=>'Do not hack',
+	2=>'Do not hack',
+	3=>'Hack',
+	4=>'Do not hack',
+);
+
+my %TYPE2OWNER = (
+	1=>'OSAA',
+	2=>'?borrowed?',
+	3=>'OSAA',
+	4=>'?private?',
+);
+
+die "Syntax: $Script <sourcedir>" unless @ARGV == 1;
+my ($sourcedir) = @ARGV;
+die "Source directory invalid: $sourcedir" unless -d $sourcedir;
+
+my $seenFile = "$sourcedir/seen.store";
+opendir SD, $sourcedir or die "Failed to open dir: $sourcedir: $!";
+my @files = sort grep {!/^\./ and /\.(jpe?g|png)/} readdir SD;
+closedir SD;
+
+my $qr = -f $seenFile ? retrieve($seenFile) : {};
+my @newfiles = sort grep {!defined $qr->{$_}} @files;
+if (@newfiles) {
+	print "Running qr decoder on ".scalar(@newfiles)." files...\n";
+	my $allFiles = join ' ',@newfiles;
+	chdir $sourcedir; 
+	for my $qrline (split "\n", `java -jar $Bin/qrdecoder.jar $allFiles`) {
+		my @res = split "\t", $qrline;
+		
+		$qr->{$res[0]} = @res >= 2 ? $res[1] : 0;
+	}
+	store($qr, $seenFile);
+}
+
+my $xml = qq'<gear source="$sourcedir">\n';
+my %gear;
+my $curl = 'first';
+for my $file (@files) {
+	my $url = $qr->{$file} || '';
+	
+	if ($url and $curl ne $url) {
+		if ($curl ne 'first') {
+			$xml .= qq' </item>\n';			
+		}
+		my ($id) = $url =~ /(\d+)$/ or die "Urgh: $url";
+		my $typeid = int($id / 1000);
+		my $owner  = $TYPE2OWNER{$typeid} or die "Failed to look up type: $typeid";
+		my $category = $TYPE2CAT{$typeid} or die "Failed to look up category: $typeid";
+		$xml .= qq' <item id="$id" url="$url" title="" type="" owner="$owner" category="$category" acquired="2010">\n';
+		$curl = $url;			
+	}
+	
+	if ($url) {
+		$xml .= qq'  <image name="$file" qr="$url" hide="yes"/>\n';
+	} else {
+		$xml .= qq'  <image name="$file"/>\n';		
+	} 
+}
+$xml .= qq'</gear>\n';
+
+open X, ">$sourcedir/import.xml" or die "Urgh!";
+print X $xml;
+close X;
+
+print "Wrote $sourcedir/import.xml\n";
+
+exit 0;

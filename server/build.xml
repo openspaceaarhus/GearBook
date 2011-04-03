@@ -1,0 +1,21 @@
+<project name="project" default="cmdline">
+	<property name="obj" value="${basedir}/obj"/>
+	
+	<target name="cmdline">
+
+		<mkdir dir="${obj}"/>
+		<unzip dest="${obj}" src="${basedir}/lib/zxing-1.6/core/core.jar"/>
+		<unzip dest="${obj}" src="${basedir}/lib/zxing-1.6/javase/javase.jar"/>
+
+		<javac srcdir="${basedir}/decoder-src" destdir="${obj}" classpath="${obj}"/>
+	
+		<jar destfile="${basedir}/qrdecoder.jar" basedir="${obj}">
+			<manifest>
+			    <attribute name="Main-Class" value="dk.osaa.gb.decoder.QRDecoder" />
+			</manifest>
+		</jar>	
+
+	</target>
+
+</project>
+ 
