@@ -6,10 +6,49 @@ use XML::Simple;
 use WWW::Mechanize;
 use LWP::UserAgent;
 use Data::Dumper;
+use Carp qw(croak);
 
 die "Syntax: $Script <sourcedir>" unless @ARGV == 1;
 my ($sourcedir) = @ARGV;
 die "Source directory invalid: $sourcedir" unless -d $sourcedir;
+
+my %cfg;
+open C, "<$ENV{HOME}/.uploadtowiki" or die "Failed to read config file $ENV{HOME}/.uploadtowiki: $!";
+while (my $l = <C>) {
+    chomp $l;
+    my ($k, $v) = $l =~ /^([a-zA-Z0-9_]+)\s*=\s*(.+)$/;
+    next unless $k;
+    $cfg{$k} = $v;
+}
+close C;
+
+for my $k (qw'username password') {
+    die "Missing key in $ENV{HOME}/.uploadtowiki: $k" unless exists $cfg{$k};
+}
+
+my $m = new WWW::Mechanize(autocheck=>0);
+
+sub dieState($) {
+    my $msg = shift @_;
+
+    open O, ">state.html" or die "Failed to write state: $!";
+    print O $m->content;
+    close O;
+
+    croak $msg;
+}
+
+$m->get("http://osaa.dk/wiki/index.php?title=Speciel:Log_p%C3%A5&returnto=Forside");
+$m->submit_form(
+    form_number => 1,
+    fields      => {
+	wpName     => $cfg{username},
+	wpPassword => $cfg{password},
+    },    
+    button    => 'wpLoginattempt',
+    );
+
+dieState("Got to ".$m->uri) unless $m->uri eq 'http://osaa.dk/wiki/index.php/Forside';
 
 my $metaFile = "$sourcedir/meta.xml";
 die "Unable to find $metaFile" unless -f $metaFile;
@@ -17,20 +56,31 @@ die "Unable to find $metaFile" unless -f $metaFile;
 my $meta = XMLin($metaFile, KeyAttr=>['id'], ForceArray=>['image']);
 
 for my $id (keys %{$meta->{item}}) {
-	my $item = $meta->{item}{$id};
-	
-	for my $f (qw'owner acquired url type category title') {
-		die "Missing or empty field: $f for $id" unless $item->{$f};		
-	}
-	
-	# Get $url to check that it returns 404 right now.
-	
-	# Upload all the images as $id-0.jpeg $id-1.jpeg and so on
-	my @images;
-		
-	# Create wiki page with the correct name.
-	
-	# Create redirect page at $url to page. 	
-	
+    my $item = $meta->{item}{$id};
+    
+    for my $f (qw'owner acquired url type category title') {
+	die "Missing or empty field: $f for $id" unless $item->{$f};
+    }
+    
+    # Get $url to check that it returns 404 right now.
+    $m->get($item->{url});
+    if ($m->status == 200) {
+	print "Item ID $item->{id} called $item->{title} already exists, skipping.\n";
+	next;
+
+    } elsif ($m->status != 404) {
+	print "Whoops, got error for item ID $item->{id} called $item->{title}, skipping.\n";
+	next;
+    }
+
+    dieState("Got to: ".$m->uri);
+    
+    # Upload all the images as $id-0.jpeg $id-1.jpeg and so on
+    my @images;
+    
+    # Create wiki page with the correct name.
+    
+    # Create redirect page at $url to page. 	
+    
 }
 
