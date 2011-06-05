@@ -65,7 +65,7 @@ for my $id (keys %{$meta->{item}}) {
     # Get $url to check that it returns 404 right now.
     $m->get($item->{url});
     if ($m->status == 200) {
-	print "Item ID $item->{id} called $item->{title} already exists, skipping.\n";
+	print "Item ID $id called $item->{title} already exists, skipping.\n";
 	next;
 
     } elsif ($m->status != 404) {
@@ -73,14 +73,95 @@ for my $id (keys %{$meta->{item}}) {
 	next;
     }
 
-    dieState("Got to: ".$m->uri);
-    
-    # Upload all the images as $id-0.jpeg $id-1.jpeg and so on
+ 
+    # Upload all the images as gb-$id-0.jpeg gb-$id-1.jpeg and so on
     my @images;
+    my $ii = 0;
+    for my $i (@{$item->{image}}) {
+	next if $i->{hide};
+
+	my ($ext) = $i->{name} =~ /\.([^\.]+)$/;
+	$ext = lc $ext;
+	$ext = 'jpeg' if $ext eq 'jpg';
+	my $wn = "gb-$id-$ii.$ext"; $ii++;
+	push @images, $wn;
+
+	$m->get("http://osaa.dk/wiki/index.php/Fil:$wn");
+	if ($m->status == 200 and $m->content !~ /No file by this name exists/) {
+	    print "The image $i->{name} already exists as $wn, skipping\n";
+	    next;
+	}
+
+	print "Uploading $i->{name} as $wn\n";
+
+	$m->get("http://osaa.dk/wiki/index.php/Speciel:Upload");    
+	dieState "Failed to get to upload page" unless $m->status == 200;
+	$m->submit_form(
+	    form_number => 1,
+	    fields      => {
+		wpUploadFile => "$sourcedir/$i->{name}",
+		wpDestFile   => $wn,		
+	    },    
+	    button    => 'wpUpload',
+	    );
+	dieState "Failed to upload $i->{name} as $wn" unless $m->status == 200;
+    }
+
+    dieState "Did not find any images" unless @images; 
+
+    print "Creating page $item->{url} for $item->{title}\n";
+    my $wiki = <<"EOW";
+{{Stub}}
+
+{{Infobox gear
+|title        = $item->{title}
+|image        = $images[0]
+
+|id           = $id
+|category     = $item->{category}
+|categorizer  = [[User:$cfg{username}|$cfg{username}]]
+|owner        = $item->{owner}
+|type         = $item->{type}
+|acquired     = $item->{acquired}
+}}
+
+==About==
+
+EOW
+    if (@images > 1) {
+        $wiki .= "==Photos==\n\n";
+        for my $i (@images[1..@images-1]) {
+	    $wiki .= " [[Fil:$i|500px]]\n";
+        }
+    }
+
     
-    # Create wiki page with the correct name.
+    # Start by creating the page with the ID:
+    $m->get($item->{url});
+    $m->follow_link(text_regex => qr/(create|edit this page)/);    
+    $m->submit_form(
+	form_number => 1,
+	fields      => {
+	    wpTextbox1 => $wiki,
+	},    
+	button    => 'wpSave',
+	);
+    dieState "Failed to upload $item->{title} as $id" unless $m->status == 200;
+
     
-    # Create redirect page at $url to page. 	
-    
+    # Move ID page to the page with the real title
+    $m->get($item->{url});
+    $m->follow_link(text_regex => qr/move/i);
+    $m->submit_form(
+	form_number => 1,
+	fields      => {
+	    wpNewTitle => $item->{title},
+	},    
+	button    => 'wpMove',
+	);
+    dieState "Failed to rename $id -> $item->{title}" unless $m->status == 200;
+
+#    die Dumper $item;   
+#    dieState("Got to: ".$m->uri);
 }
 
