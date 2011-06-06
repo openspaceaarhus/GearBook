@@ -50,10 +50,10 @@ $m->submit_form(
 
 dieState("Got to ".$m->uri) unless $m->uri eq 'http://osaa.dk/wiki/index.php/Forside';
 
-my $metaFile = "$sourcedir/meta.xml";
+my $metaFile = "$sourcedir/import.xml";
 die "Unable to find $metaFile" unless -f $metaFile;
 
-my $meta = XMLin($metaFile, KeyAttr=>['id'], ForceArray=>['image']);
+my $meta = XMLin($metaFile, KeyAttr=>['id'], ForceArray=>['item','image']);
 
 for my $id (keys %{$meta->{item}}) {
     my $item = $meta->{item}{$id};
@@ -96,15 +96,25 @@ for my $id (keys %{$meta->{item}}) {
 
 	$m->get("http://osaa.dk/wiki/index.php/Speciel:Upload");    
 	dieState "Failed to get to upload page" unless $m->status == 200;
+
+	my $ifn = "$sourcedir/$i->{name}";
+	my $ofn;
+	if ((stat($ifn))[7] > 1000*1000) {	
+	    $ofn = "/tmp/$wn";
+	    system("convert", $ifn, '-resize', '1500', $ofn)
+		and die "Failed to convert $ifn to a reasonable size";
+        } else {
+	    $ofn = $ifn;
+	}
 	$m->submit_form(
 	    form_number => 1,
 	    fields      => {
-		wpUploadFile => "$sourcedir/$i->{name}",
+		wpUploadFile => $ofn,
 		wpDestFile   => $wn,		
 	    },    
 	    button    => 'wpUpload',
 	    );
-	dieState "Failed to upload $i->{name} as $wn" unless $m->status == 200;
+	dieState "Failed to upload $ofn as $wn" unless $m->status == 200;
     }
 
     dieState "Did not find any images" unless @images; 

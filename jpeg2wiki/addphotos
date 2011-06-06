@@ -25,7 +25,7 @@ die "Source directory invalid: $sourcedir" unless -d $sourcedir;
 
 my $seenFile = "$sourcedir/seen.store";
 opendir SD, $sourcedir or die "Failed to open dir: $sourcedir: $!";
-my @files = sort grep {!/^\./ and /\.(jpe?g|png)/} readdir SD;
+my @files = sort grep {!/^\./ and /\.(jpe?g|png)/i} readdir SD;
 closedir SD;
 
 my $qr = -f $seenFile ? retrieve($seenFile) : {};
