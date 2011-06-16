@@ -66,6 +66,7 @@ for my $file (@files) {
 		$xml .= qq'  <image name="$file"/>\n';		
 	} 
 }
+$xml .= qq' </item>\n' if @files;			
 $xml .= qq'</gear>\n';
 
 open X, ">$sourcedir/import.xml" or die "Urgh!";

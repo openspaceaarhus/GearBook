@@ -117,7 +117,7 @@ for my $id (keys %{$meta->{item}}) {
 	dieState "Failed to upload $ofn as $wn" unless $m->status == 200;
     }
 
-    dieState "Did not find any images" unless @images; 
+    dieState "Did not find any images for $id" unless @images; 
 
     print "Creating page $item->{url} for $item->{title}\n";
     my $wiki = <<"EOW";
